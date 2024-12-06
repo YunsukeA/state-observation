@@ -2583,30 +2583,27 @@ void KineticsObserver::computeLocalAccelerations(const Vector & x, Vector & acce
          - worldCentroidStateKinematics.angVel().cross(I_() * worldCentroidStateKinematics.angVel() + sigma_()));
 }
 
-void KineticsObserver::computeContactForce_(VectorContactIterator i,
-                                            LocalKinematics & worldCentroidStateKinematics,
-                                            Kinematics & worldRestContactPose,
-                                            Vector3 & contactForce,
-                                            Vector3 & contactTorque)
+void KineticsObserver::computeContactWrench_(const Contact & contact,
+                                             Kinematics & worldCentroidStateKinematics,
+                                             Kinematics & worldRestContactPose,
+                                             Vector6 & contactWrench)
 {
-  Contact & contact = *i;
-
   // the kinematics of the contact in the centroid's frame, expressed in the centroid's frame
-  Kinematics & centroidContactKine = contact.centroidContactKine;
+  const Kinematics & centroidContactKine = contact.centroidContactKine;
   // the kinematics of the contact in the world frame, expressed in the world frame
   Kinematics worldFkContactPose;
-  worldFkContactPose.setToProductNoAlias(Kinematics(worldCentroidStateKinematics), centroidContactKine);
+  worldFkContactPose.setToProductNoAlias(worldCentroidStateKinematics, centroidContactKine);
 
-  contactForce = worldCentroidStateKinematics.orientation.toMatrix3().transpose()
-                 * (contact.linearStiffness * (worldRestContactPose.position() - worldFkContactPose.position())
-                    - contact.linearDamping * worldFkContactPose.linVel());
+  contactWrench.segment(0, 3) =
+      -(worldFkContactPose.orientation.toMatrix3().transpose()
+        * (contact.linearStiffness * (worldFkContactPose.position() - worldRestContactPose.position())
+           + contact.linearDamping * worldFkContactPose.linVel()));
 
-  contactTorque = worldCentroidStateKinematics.orientation.toMatrix3().transpose()
-                  * (-0.5 * contact.angularStiffness
-                         * (worldFkContactPose.orientation.toQuaternion()
-                            * worldRestContactPose.orientation.toQuaternion().inverse())
-                               .vec()
-                     - contact.angularDamping * worldFkContactPose.angVel());
+  Matrix R = worldFkContactPose.orientation.toMatrix3() * worldRestContactPose.orientation.toMatrix3().transpose();
+  contactWrench.segment(3, 3) =
+      -worldFkContactPose.orientation.toMatrix3().transpose()
+      * (0.5 * contact.angularStiffness * kine::skewSymmetricToRotationVector(R - R.transpose())
+         + contact.angularDamping * worldFkContactPose.angVel());
 }
 
 void KineticsObserver::computeContactForces_(LocalKinematics & worldCentroidStateKinematics,
@@ -2816,32 +2813,17 @@ Vector KineticsObserver::stateDynamics(const Vector & xInput, const Vector & /*u
   {
     if(i->isSet)
     {
-      const Contact & contact = *i;
-      // input kinematics of the contact in the centroid frame
-      const Kinematics & centroidContactKine = contact.centroidContactKine;
+      Contact & contact = *i;
+
       // rest kinematics of the contact in the world frame
-      Kinematics worldContactRefPose; // not using the variable belonging to Contact as this variable must change only
-                                      // at the end of the update
-      worldContactRefPose.fromVector(x.segment<sizePose>(contactPosIndex(i)), flagsPoseKine);
+      Kinematics worldContactRestPose; // not using the variable belonging to Contact as this variable must change only
+                                       // at the end of the update
+      worldContactRestPose.fromVector(x.segment<sizePose>(contactPosIndex(i)), flagsPoseKine);
 
-      const Matrix3 & Kpt = contact.linearStiffness;
-      const Matrix3 & Kdt = contact.linearDamping;
-      const Matrix3 & Kpr = contact.angularStiffness;
-      const Matrix3 & Kdr = contact.angularDamping;
-
-      // the pose of the contact in the world frame, expressed in the contact's frame
-      Kinematics worldFkContactPose;
-      worldFkContactPose.setToProductNoAlias(globWorldCentroidStateKinematics, centroidContactKine);
-
-      x.segment<sizeForce>(contactForceIndex(i)) =
-          -(worldFkContactPose.orientation.toMatrix3().transpose()
-            * (Kpt * (worldFkContactPose.position() - worldContactRefPose.position())
-               + Kdt * worldFkContactPose.linVel()));
-
-      Matrix R = worldFkContactPose.orientation.toMatrix3() * worldContactRefPose.orientation.toMatrix3().transpose();
-      x.segment<sizeTorque>(contactTorqueIndex(i)) =
-          -worldFkContactPose.orientation.toMatrix3().transpose()
-          * (0.5 * Kpr * kine::skewSymmetricToRotationVector(R - R.transpose()) + Kdr * worldFkContactPose.angVel());
+      Vector6 predictedWrench;
+      computeContactWrench_(contact, globWorldCentroidStateKinematics, worldContactRestPose, predictedWrench);
+      x.segment<sizeForce>(contactForceIndex(i)) = predictedWrench.segment(0, 3);
+      x.segment<sizeTorque>(contactTorqueIndex(i)) = predictedWrench.segment(3, 3);
     }
   }
 
@@ -2851,6 +2833,28 @@ Vector KineticsObserver::stateDynamics(const Vector & xInput, const Vector & /*u
   }
 
   return x;
+}
+
+Vector6 KineticsObserver::getCurrentViscoElasticWrench(Index numContact)
+{
+  BOOST_ASSERT(!contacts_[contactNumber].isSet
+               && "The contact doesn't exist, the associated visco-elastic wrench cannot be computed.");
+
+  const Contact & contact = contacts_.at(static_cast<size_t>(numContact));
+
+  LocalKinematics worldCentroidStateKinematics;
+  worldCentroidStateKinematics.fromVector(getCurrentStateVector().segment<sizeStateKine>(kineIndex()),
+                                          kine::Kinematics::Flags::pose | kine::Kinematics::Flags::vel);
+  Kinematics globWorldCentroidStateKinematics(worldCentroidStateKinematics);
+  // rest kinematics of the contact in the world frame
+  Kinematics worldContactRestPose; // not using the variable belonging to Contact as this variable must change only
+                                   // at the end of the update
+  worldContactRestPose.fromVector(getCurrentStateVector().segment<sizePose>(contactPosIndex(numContact)),
+                                  flagsPoseKine);
+
+  Vector6 contactWrench;
+  computeContactWrench_(contact, globWorldCentroidStateKinematics, worldContactRestPose, contactWrench);
+  return contactWrench;
 }
 
 Vector KineticsObserver::measureDynamics(const Vector & x_bar, const Vector & /*unused*/, TimeIndex k)

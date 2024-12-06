@@ -1231,11 +1231,10 @@ protected:
   /// @param worldRestContactPose Rest pose of the contact
   /// @param contactForce Empty vector of the contact force to estimate
   /// @param contactTorque Empty vector of the contact force to estimate
-  void computeContactForce_(VectorContactIterator i,
-                            LocalKinematics & worldCentroidStateKinematics,
-                            Kinematics & worldRestContactPose,
-                            Vector3 & contactForce,
-                            Vector3 & contactTorque);
+  void computeContactWrench_(const Contact & contact,
+                             Kinematics & worldCentroidStateKinematics,
+                             Kinematics & worldRestContactPose,
+                             Vector6 & contactWrench);
 
   /// @brief @copybrief computeContactForce_(VectorContactIterator i, LocalKinematics & worldCentroidStateKinematics,
   /// Kinematics & worldRestContactPose, Vector3 & contactForce, Vector3 & contactTorque). Compute the resulting wrench
@@ -1288,6 +1287,10 @@ public:
   /// @brief Returns the kinematics of the contact in the user frame, given as an input when updating the contact.
   /// @return Kinematics
   Kinematics getUserContactInputKine(Index numContact) const;
+
+  /// @brief Returns the wrench predicted by the visco-elastic model from the currently estimated state
+  /// @return The predicted wrench
+  Vector6 getCurrentViscoElasticWrench(Index numContact);
 
   /// @brief Get the measurement index of the required IMU : allows to access its corresponding measurements in the
   /// measurement vector for example
