@@ -4,7 +4,6 @@
  *
  * National Institute of Advanced Industrial Science and Technology (AIST)
  */
-
 #include <state-observation/dynamics-estimators/kinetics-observer.hpp>
 #ifndef NDEBUG
 #  include <iostream>
@@ -93,10 +92,11 @@ KineticsObserver::KineticsObserver(unsigned maxContacts, unsigned maxNumberOfIMU
   worldCentroidStateVectorDx_(stateTangentSize_), oldWorldCentroidStateVector_(stateSize_),
   additionalForce_(Vector3::Zero()), additionalTorque_(Vector3::Zero()),
   ekf_(stateSize_, stateTangentSize_, measurementSizeBase, measurementSizeBase, inputSize, false, false),
-  finiteDifferencesJacobians_(false), withGyroBias_(false), withUnmodeledWrench_(false),
-  withAccelerationEstimation_(false), withDampingInMatrixA_(false), k_est_(0), k_data_(0), mass_(defaultMass),
-  dt_(defaultdx), processNoise_(0x0), measurementNoise_(0x0), numberOfContactRealSensors_(0),
-  currentIMUSensorNumber_(0), linearStiffnessMatDefault_(Matrix3::Identity() * linearStiffnessDefault),
+  finiteDifferencesJacobians_(false), withGyroBias_(true), withUnmodeledWrench_(true),
+  withAccelerationEstimation_(false), withDampingInMatrixA_(true), withContactStateCovRemoval_(true),
+  withAdaptativeContactProcessCov_(true), k_est_(0), k_data_(0), mass_(defaultMass), dt_(defaultdx), processNoise_(0x0),
+  measurementNoise_(0x0), numberOfContactRealSensors_(0), currentIMUSensorNumber_(0),
+  linearStiffnessMatDefault_(Matrix3::Identity() * linearStiffnessDefault),
   angularStiffnessMatDefault_(Matrix3::Identity() * angularStiffnessDefault),
   linearDampingMatDefault_(Matrix3::Identity() * linearDampingDefault),
   angularDampingMatDefault_(Matrix3::Identity() * angularDampingDefault),
@@ -392,7 +392,7 @@ const Vector & KineticsObserver::update()
   if(k_est_ != k_data_)
   {
     updateMeasurements();
-    updateContactPoseCovariances();
+    updateContactCovariances();
 
     ekf_.updateStateAndMeasurementPrediction();
 
@@ -710,6 +710,26 @@ void KineticsObserver::setWithDampingInMatrixA(bool b)
   withDampingInMatrixA_ = b;
 }
 
+void KineticsObserver::setWithContactStateCovRemoval(bool b)
+{
+  withContactStateCovRemoval_ = b;
+}
+
+bool KineticsObserver::getWithContactStateCovRemoval() const
+{
+  return withContactStateCovRemoval_;
+}
+
+void KineticsObserver::setWithAdaptativeContactProcessCov(bool b)
+{
+  withAdaptativeContactProcessCov_ = b;
+}
+
+bool KineticsObserver::getWithAdaptativeContactProcessCov() const
+{
+  return withAdaptativeContactProcessCov_;
+}
+
 Index KineticsObserver::setIMU(const Vector3 & accelero,
                                const Vector3 & gyrometer,
                                const Kinematics & userImuKinematics,
@@ -897,20 +917,20 @@ void KineticsObserver::setContactWrenchSensorDefaultCovarianceMatrix(const Matri
   contactWrenchSensorCovMatDefault_ = wrenchSensorCovMat;
 }
 
-void KineticsObserver::updateContactPoseCovariances()
+void KineticsObserver::updateContactCovariances()
 {
   Index nbCurrentContacts = getNumberOfSetContacts();
 
   if(((getNumberOfSetContacts() == nb_prevContacts_) && !contactRestPosProcessChanged_
       && !contactRestOriProcessChanged_)
-     || getNumberOfSetContacts() == 0)
+     || getNumberOfSetContacts() == 0 || !(withAdaptativeContactProcessCov_ || withContactStateCovRemoval_))
   {
     return;
   }
 
   Matrix processCovMat = ekf_.getQ();
 
-  if(nbCurrentContacts < nb_prevContacts_)
+  if(nbCurrentContacts < nb_prevContacts_ && withContactStateCovRemoval_)
   {
     Matrix stateCovMat = ekf_.getStateCovariance();
     Matrix P_prime = stateCovMat.triangularView<Eigen::Lower>();
@@ -950,6 +970,11 @@ void KineticsObserver::updateContactPoseCovariances()
     }
     P_prime = P_prime.selfadjointView<Eigen::Lower>();
     ekf_.setStateCovariance(P_prime);
+  }
+
+  if(!withAdaptativeContactProcessCov_)
+  {
+    return;
   }
 
   // exceptional case if there is only one contact!
@@ -2769,10 +2794,6 @@ Vector KineticsObserver::stateDynamics(const Vector & xInput, const Vector & /*u
   computeLocalAccelerations_(worldCentroidStateKinematics, initTotalCentroidForce_, initTotalCentroidTorque_, linacc,
                              angacc);
 
-  LocalKinematics test = worldCentroidStateKinematics;
-  // worldCentroidStateKinematics.SE3_integration(dt_);
-
-  test.integrate(dt_);
   worldCentroidStateKinematics.SE3_integration(dt_);
 
   x.segment<sizeStateKine>(kineIndex()) = worldCentroidStateKinematics.toVector(flagsStateKine);

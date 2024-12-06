@@ -103,6 +103,18 @@ public:
   /// @return True if the acceleration is also estimated. Returns false otherwise.
   bool getWithAccelerationEstimation() const;
 
+  /// @brief Returns if the contribution of the removed contact must be removed from the other variables in the state
+  /// covariance matrix.
+  ///
+  /// @return True if the state covariance is adapted. Returns false otherwise.
+  bool getWithContactStateCovRemoval() const;
+
+  /// @brief Returns if the process covariance matrix associated with the contact rest poses must be adapted such that
+  /// the process variance on the average pose is zero.
+  ///
+  /// @return True if the process covariance is adapted. Returns false otherwise.
+  bool getWithAdaptativeContactProcessCov() const;
+
   /// @brief Set if the gyrometers bias is computed or not.
   ///        This parameter is global for all the IMUs.
   ///
@@ -113,6 +125,18 @@ public:
   ///
   /// @param b
   void setWithDampingInMatrixA(bool b = true);
+
+  /// @brief Set if the contribution of the removed contact must be removed from the other variables in the state
+  /// covariance matrix.
+  ///
+  /// @param b
+  void setWithContactStateCovRemoval(bool b = true);
+
+  /// @brief Set if the process covariance matrix associated with the contact rest poses must be adapted such that the
+  /// process variance on the average pose is zero.
+  ///
+  /// @param b
+  void setWithAdaptativeContactProcessCov(bool b = true);
 
   /// @brief Set the total mass of the robot. This can be changed online
   ///
@@ -470,11 +494,13 @@ public:
   /// @return const Vector& The state vector
   const Vector & update();
 
-  /// @brief updates the process covariance associated to the contact rest positions.
-  /// @details modifies the process covariance matrix Q such that the process noise on the rest contact positions allows
-  /// them to move, but their average position remains unchanged. This allows for the relaxation of internal forces but
-  /// prevents drifting.
-  void updateContactPoseCovariances();
+  /// @brief updates the process and the state covariance matrices associated with contacts.
+  /// @details if \ref withAdaptativeContactProcessCov_ is set to true: modifies the process covariance matrix Q such
+  /// that the process noise on the rest contact positions allows them to move, but their average position remains
+  /// unchanged. This allows for the relaxation of internal forces but prevents drifting. if \ref
+  /// withContactStateCovRemoval_ is set to true: removes the contribution of the newly removed contacts from the state
+  /// covariance matrix.
+  void updateContactCovariances();
 
   /// @brief Returns the predicted Kinematics object of the centroid in the world frame at the time of the measurement
   /// predictions
@@ -1406,6 +1432,8 @@ protected:
   bool withUnmodeledWrench_;
   bool withAccelerationEstimation_;
   bool withDampingInMatrixA_;
+  bool withContactStateCovRemoval_;
+  bool withAdaptativeContactProcessCov_;
 
   IndexedVector3 com_, comd_, comdd_;
   IndexedVector3 sigma_, sigmad_;
