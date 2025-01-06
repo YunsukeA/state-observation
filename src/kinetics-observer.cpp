@@ -93,9 +93,9 @@ KineticsObserver::KineticsObserver(unsigned maxContacts, unsigned maxNumberOfIMU
   additionalForce_(Vector3::Zero()), additionalTorque_(Vector3::Zero()),
   ekf_(stateSize_, stateTangentSize_, measurementSizeBase, measurementSizeBase, inputSize, false, false),
   finiteDifferencesJacobians_(false), withGyroBias_(true), withUnmodeledWrench_(true),
-  withAccelerationEstimation_(false), withDampingInMatrixA_(true), withContactStateCovRemoval_(true),
-  withAdaptativeContactProcessCov_(true), k_est_(0), k_data_(0), mass_(defaultMass), dt_(defaultdx), processNoise_(0x0),
-  measurementNoise_(0x0), numberOfContactRealSensors_(0), currentIMUSensorNumber_(0),
+  withAccelerationEstimation_(false), withDampingInMatrixA_(true), withAdaptativeContactProcessCov_(true), k_est_(0),
+  k_data_(0), mass_(defaultMass), dt_(defaultdx), processNoise_(0x0), measurementNoise_(0x0),
+  numberOfContactRealSensors_(0), currentIMUSensorNumber_(0),
   linearStiffnessMatDefault_(Matrix3::Identity() * linearStiffnessDefault),
   angularStiffnessMatDefault_(Matrix3::Identity() * angularStiffnessDefault),
   linearDampingMatDefault_(Matrix3::Identity() * linearDampingDefault),
@@ -710,16 +710,6 @@ void KineticsObserver::setWithDampingInMatrixA(bool b)
   withDampingInMatrixA_ = b;
 }
 
-void KineticsObserver::setWithContactStateCovRemoval(bool b)
-{
-  withContactStateCovRemoval_ = b;
-}
-
-bool KineticsObserver::getWithContactStateCovRemoval() const
-{
-  return withContactStateCovRemoval_;
-}
-
 void KineticsObserver::setWithAdaptativeContactProcessCov(bool b)
 {
   withAdaptativeContactProcessCov_ = b;
@@ -923,59 +913,12 @@ void KineticsObserver::updateContactCovariances()
 
   if(((getNumberOfSetContacts() == nb_prevContacts_) && !contactRestPosProcessChanged_
       && !contactRestOriProcessChanged_)
-     || getNumberOfSetContacts() == 0 || !(withAdaptativeContactProcessCov_ || withContactStateCovRemoval_))
+     || getNumberOfSetContacts() == 0 || !withAdaptativeContactProcessCov_)
   {
     return;
   }
 
   Matrix processCovMat = ekf_.getQ();
-
-  if(nbCurrentContacts < nb_prevContacts_ && withContactStateCovRemoval_)
-  {
-    Matrix stateCovMat = ekf_.getStateCovariance();
-    Matrix P_prime = stateCovMat.triangularView<Eigen::Lower>();
-
-    std::vector<Index> removedIndexes;
-    for(Index removedContactIndex : removedContacts_)
-    {
-      for(Index s = 0; s < sizeContactTangent; s++)
-      {
-        removedIndexes.push_back(contactIndexTangent(removedContactIndex) + s);
-      }
-    }
-    for(Index removedIndex : removedIndexes)
-    {
-      for(Index i = 0; i < stateCovMat.rows(); i++)
-      {
-        Index rowsUntilEnd = P_prime.rows() - i - 1;
-        if(std::find(removedIndexes.begin(), removedIndexes.end(), i) == removedIndexes.end()
-           && P_prime(i, removedIndex) > 0.0)
-        {
-          double P_bar_i_i = pow(P_prime(i, removedIndex), 2) / P_prime(removedIndex, removedIndex);
-          double coeff = sqrt((P_prime(i, i) - P_bar_i_i) / P_prime(i, i));
-          if(!std::isnan(P_bar_i_i) && !std::isnan(coeff))
-          {
-            P_prime.block(i, 0, 1, i) *= coeff;
-            P_prime.block(i + 1, i, rowsUntilEnd, 1) *= coeff;
-            P_prime(i, i) -= P_bar_i_i;
-          }
-        }
-      }
-      Index rowsUntilEnd = P_prime.rows() - removedIndex - 1;
-      P_prime.block(removedIndex, 0, 1, removedIndex + 1).setZero();
-      P_prime.block(removedIndex + 1, removedIndex, rowsUntilEnd, 1).setZero();
-
-      processCovMat.block(removedIndex, 0, 1, processCovMat.cols()).setZero();
-      processCovMat.block(0, removedIndex, processCovMat.rows(), 1).setZero();
-    }
-    P_prime = P_prime.selfadjointView<Eigen::Lower>();
-    ekf_.setStateCovariance(P_prime);
-  }
-
-  if(!withAdaptativeContactProcessCov_)
-  {
-    return;
-  }
 
   // exceptional case if there is only one contact!
   if(nbCurrentContacts == 1)

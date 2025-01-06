@@ -1435,7 +1435,6 @@ protected:
   bool withUnmodeledWrench_;
   bool withAccelerationEstimation_;
   bool withDampingInMatrixA_;
-  bool withContactStateCovRemoval_;
   bool withAdaptativeContactProcessCov_;
 
   IndexedVector3 com_, comd_, comdd_;
