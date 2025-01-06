@@ -949,7 +949,7 @@ void KineticsObserver::updateContactCovariances()
       {
         Index rowsUntilEnd = P_prime.rows() - i - 1;
         if(std::find(removedIndexes.begin(), removedIndexes.end(), i) == removedIndexes.end()
-           && P_prime(i, removedIndex) < 0.0)
+           && P_prime(i, removedIndex) > 0.0)
         {
           double P_bar_i_i = pow(P_prime(i, removedIndex), 2) / P_prime(removedIndex, removedIndex);
           double coeff = sqrt((P_prime(i, i) - P_bar_i_i) / P_prime(i, i));
