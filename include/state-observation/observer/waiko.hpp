@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef VanytEstimatorHPP
-#define VanytEstimatorHPP
+#ifndef WaikoHPP
+#define WaikoHPP
 
 #include "state-observation/observer/tilt-estimator-humanoid.hpp"
 
@@ -22,11 +22,11 @@ namespace stateObservation
 {
 
 /**
- * \class  VanytEstimator
+ * \class  Waiko
  * \brief  Version of the Tilt Estimator for humanoid robots.
  *
  */
-class STATE_OBSERVATION_DLLAPI VanytEstimator : public ZeroDelayObserver // : public TiltEstimatorHumanoid
+class STATE_OBSERVATION_DLLAPI Waiko : public ZeroDelayObserver // : public TiltEstimatorHumanoid
 {
   typedef kine::Orientation Orientation;
 
@@ -99,7 +99,7 @@ public:
   ///  \li beta  : parameter related to the fast convergence of the tilt
   ///  \li rho  : parameter related to the orthogonality
   ///  \li dt  : timestep between each iteration
-  VanytEstimator(double alpha, double beta, double rho, double dt);
+  Waiko(double alpha, double beta, double rho, double dt);
 
   /// The constructor
   ///  \li alpha : parameter related to the convergence of the linear velocity
@@ -108,7 +108,7 @@ public:
   ///  \li rho  : parameter related to the orthogonality
   ///  \li dt  : timestep between each iteration
   ///  \li dt  : capacity of the iteration buffer
-  VanytEstimator(double alpha, double beta, double rho, double dt, unsigned long bufferCapacity);
+  Waiko(double alpha, double beta, double rho, double dt, unsigned long bufferCapacity);
 
   inline IterInfos & getCurrentIter()
   {
@@ -264,4 +264,4 @@ protected:
 
 } // namespace stateObservation
 
-#endif // VanytEstimatorHPP
+#endif // WaikoHPP
