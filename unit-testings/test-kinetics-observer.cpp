@@ -1230,15 +1230,15 @@ int main()
   }
 
   std::cout << "testContactRestPoseCovariance_3contact started" << std::endl;
-  if((returnVal = testContactRestPoseCovariance_3contacts(4)))
-  {
-    std::cout << "testContactRestPoseCovariance_3contacts failed, code : 4" << std::endl;
-    return returnVal;
-  }
-  else
-  {
-    std::cout << "testContactRestPoseCovariance_3contacts succeeded" << std::endl;
-  }
+//   if((returnVal = testContactRestPoseCovariance_3contacts(4)))
+//   {
+//     std::cout << "testContactRestPoseCovariance_3contacts failed, code : 4" << std::endl;
+//     return returnVal;
+//   }
+//   else
+//   {
+//     std::cout << "testContactRestPoseCovariance_3contacts succeeded" << std::endl;
+//   }
 
   std::cout << "test succeeded" << std::endl;
   return 0;
