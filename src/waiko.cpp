@@ -1,9 +1,9 @@
 #include "state-observation/tools/definitions.hpp"
-#include <state-observation/observer/vanyt-estimator.hpp>
+#include <state-observation/observer/waiko.hpp>
 
 namespace stateObservation
 {
-VanytEstimator::VanytEstimator(double alpha, double beta, double rho, double dt)
+Waiko::Waiko(double alpha, double beta, double rho, double dt)
 : ZeroDelayObserver(13, 9), iterInfos_(alpha, beta, rho, dt)
 {
   iterInfos_.alpha_ = alpha;
@@ -12,7 +12,7 @@ VanytEstimator::VanytEstimator(double alpha, double beta, double rho, double dt)
   iterInfos_.dt_ = dt;
 }
 
-void VanytEstimator::initEstimator(const Vector3 & pos, const Vector3 & x1, const Vector3 & x2_prime, const Vector4 & R)
+void Waiko::initEstimator(const Vector3 & pos, const Vector3 & x1, const Vector3 & x2_prime, const Vector4 & R)
 {
   Eigen::VectorXd initStateVector = Eigen::VectorXd::Zero(getStateSize());
 
@@ -31,7 +31,7 @@ void VanytEstimator::initEstimator(const Vector3 & pos, const Vector3 & x1, cons
   getCurrentIter().updatedPose_ = getCurrentIter().initPose_;
 }
 
-void VanytEstimator::IterInfos::startNewIteration()
+void Waiko::IterInfos::startNewIteration()
 {
   if(k_est_ == k_data_)
   {
@@ -44,7 +44,7 @@ void VanytEstimator::IterInfos::startNewIteration()
   }
 }
 
-void VanytEstimator::IterInfos::resetCorrectionTerms()
+void Waiko::IterInfos::resetCorrectionTerms()
 {
   sigma_.setZero();
   oriCorrFromOriMeas_.setZero();
@@ -52,11 +52,11 @@ void VanytEstimator::IterInfos::resetCorrectionTerms()
   oriCorrFromContactPos_.setZero();
 }
 
-void VanytEstimator::setMeasurement(const Vector3 & yv_k,
-                                    const Vector3 & ya_k,
-                                    const Vector3 & yg_k,
-                                    TimeIndex k,
-                                    bool resetImuLocVelHat)
+void Waiko::setMeasurement(const Vector3 & yv_k,
+                           const Vector3 & ya_k,
+                           const Vector3 & yg_k,
+                           TimeIndex k,
+                           bool resetImuLocVelHat)
 {
   getCurrentIter().startNewIteration();
 
@@ -71,7 +71,7 @@ void VanytEstimator::setMeasurement(const Vector3 & yv_k,
   }
 }
 
-void VanytEstimator::setMeasurement(const ObserverBase::MeasureVector & y_k, TimeIndex k)
+void Waiko::setMeasurement(const ObserverBase::MeasureVector & y_k, TimeIndex k)
 {
   getCurrentIter().startNewIteration();
 
@@ -80,7 +80,7 @@ void VanytEstimator::setMeasurement(const ObserverBase::MeasureVector & y_k, Tim
   getCurrentIter().saveMeasurement(getMeasurement(getMeasurementTime()));
 }
 
-void VanytEstimator::IterInfos::addOrientationMeasurement(const Matrix3 & oriMeasurement, double gain)
+void Waiko::IterInfos::addOrientationMeasurement(const Matrix3 & oriMeasurement, double gain)
 {
   startNewIteration();
 
@@ -91,23 +91,23 @@ void VanytEstimator::IterInfos::addOrientationMeasurement(const Matrix3 & oriMea
                          * (Vector3::UnitZ()).transpose() * rot_diff_vec;
 }
 
-void VanytEstimator::addContactPosMeasurement(const Vector3 & posMeasurement,
-                                              const Vector3 & imuContactPos,
-                                              double gainDelta,
-                                              double gainSigma)
+void Waiko::addContactPosMeasurement(const Vector3 & posMeasurement,
+                                     const Vector3 & imuContactPos,
+                                     double gainDelta,
+                                     double gainSigma)
 {
   getCurrentIter().addContactPosMeasurement(posMeasurement, imuContactPos, gainDelta, gainSigma);
 }
 
-void VanytEstimator::addOrientationMeasurement(const Matrix3 & oriMeasurement, double gain)
+void Waiko::addOrientationMeasurement(const Matrix3 & oriMeasurement, double gain)
 {
   getCurrentIter().addOrientationMeasurement(oriMeasurement, gain);
 }
 
-void VanytEstimator::IterInfos::addContactPosMeasurement(const Vector3 & posMeasurement,
-                                                         const Vector3 & imuContactPos,
-                                                         double gainDelta,
-                                                         double gainSigma)
+void Waiko::IterInfos::addContactPosMeasurement(const Vector3 & posMeasurement,
+                                                const Vector3 & imuContactPos,
+                                                double gainDelta,
+                                                double gainSigma)
 {
   startNewIteration();
 
@@ -120,7 +120,7 @@ void VanytEstimator::IterInfos::addContactPosMeasurement(const Vector3 & posMeas
       * (imuContactPos - initPose_.orientation.toMatrix3().transpose() * (posMeasurement - initPose_.position()));
 }
 
-ObserverBase::StateVector VanytEstimator::oneStepEstimation_()
+ObserverBase::StateVector Waiko::oneStepEstimation_()
 {
   TimeIndex k = this->x_.getTime();
   IterInfos & currentIter = getCurrentIter();
@@ -144,7 +144,7 @@ ObserverBase::StateVector VanytEstimator::oneStepEstimation_()
   return x_hat;
 }
 
-ObserverBase::StateVector VanytEstimator::IterInfos::replayBufferedIteration()
+ObserverBase::StateVector Waiko::IterInfos::replayBufferedIteration()
 {
   Eigen::Matrix<double, 12, 1> dx_hat = computeStateDerivatives();
   integrateState(dx_hat);
@@ -152,7 +152,7 @@ ObserverBase::StateVector VanytEstimator::IterInfos::replayBufferedIteration()
   return updatedState_;
 }
 
-Eigen::Matrix<double, 12, 1> VanytEstimator::IterInfos::computeStateDerivatives()
+Eigen::Matrix<double, 12, 1> Waiko::IterInfos::computeStateDerivatives()
 {
   const Vector3 & yv = y_k_.head<3>();
   const Vector3 & ya = y_k_.segment<3>(3);
@@ -179,7 +179,7 @@ Eigen::Matrix<double, 12, 1> VanytEstimator::IterInfos::computeStateDerivatives(
   return dx_hat;
 }
 
-void VanytEstimator::IterInfos::integrateState(const Eigen::Matrix<double, 12, 1> & dx_hat)
+void Waiko::IterInfos::integrateState(const Eigen::Matrix<double, 12, 1> & dx_hat)
 {
   const Vector3 & vl = dx_hat.segment<3>(6);
   const Vector3 & omega = dx_hat.segment<3>(9);
@@ -197,9 +197,7 @@ void VanytEstimator::IterInfos::integrateState(const Eigen::Matrix<double, 12, 1
   updatedState_.tail(4) = updatedPose_.orientation.toVector4();
 }
 
-ObserverBase::StateVector VanytEstimator::replayIterationWithDelayedOri(unsigned long delay,
-                                                                        const Matrix3 & meas,
-                                                                        double gain)
+ObserverBase::StateVector Waiko::replayIterationWithDelayedOri(unsigned long delay, const Matrix3 & meas, double gain)
 {
   BOOST_ASSERT_MSG(withDelayedOri_, "The mode allowing to deal with delayed orientations has not been switched on.");
 
@@ -214,9 +212,7 @@ ObserverBase::StateVector VanytEstimator::replayIterationWithDelayedOri(unsigned
   return bufferedIter.replayBufferedIteration();
 }
 
-ObserverBase::StateVector VanytEstimator::replayIterationsWithDelayedOri(unsigned long delay,
-                                                                         const Matrix3 & meas,
-                                                                         double gain)
+ObserverBase::StateVector Waiko::replayIterationsWithDelayedOri(unsigned long delay, const Matrix3 & meas, double gain)
 {
   BOOST_ASSERT_MSG(withDelayedOri_, "The mode allowing to deal with delayed orientations has not been switched on.");
   BOOST_ASSERT_MSG(getCurrentIter().k_data_ == getCurrentIter().k_est_,

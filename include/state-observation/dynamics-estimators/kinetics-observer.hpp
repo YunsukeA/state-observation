@@ -103,12 +103,6 @@ public:
   /// @return True if the acceleration is also estimated. Returns false otherwise.
   bool getWithAccelerationEstimation() const;
 
-  /// @brief Returns if the contribution of the removed contact must be removed from the other variables in the state
-  /// covariance matrix.
-  ///
-  /// @return True if the state covariance is adapted. Returns false otherwise.
-  bool getWithContactStateCovRemoval() const;
-
   /// @brief Returns if the process covariance matrix associated with the contact rest poses must be adapted such that
   /// the process variance on the average pose is zero.
   ///
@@ -125,12 +119,6 @@ public:
   ///
   /// @param b
   void setWithDampingInMatrixA(bool b = true);
-
-  /// @brief Set if the contribution of the removed contact must be removed from the other variables in the state
-  /// covariance matrix.
-  ///
-  /// @param b
-  void setWithContactStateCovRemoval(bool b = true);
 
   /// @brief Set if the process covariance matrix associated with the contact rest poses must be adapted such that the
   /// process variance on the average pose is zero.
@@ -497,9 +485,7 @@ public:
   /// @brief updates the process and the state covariance matrices associated with contacts.
   /// @details if \ref withAdaptativeContactProcessCov_ is set to true: modifies the process covariance matrix Q such
   /// that the process noise on the rest contact positions allows them to move, but their average position remains
-  /// unchanged. This allows for the relaxation of internal forces but prevents drifting. if \ref
-  /// withContactStateCovRemoval_ is set to true: removes the contribution of the newly removed contacts from the state
-  /// covariance matrix.
+  /// unchanged. This allows for the relaxation of internal forces but prevents drifting.
   void updateContactCovariances();
 
   /// @brief Returns the predicted Kinematics object of the centroid in the world frame at the time of the measurement
@@ -1435,7 +1421,6 @@ protected:
   bool withUnmodeledWrench_;
   bool withAccelerationEstimation_;
   bool withDampingInMatrixA_;
-  bool withContactStateCovRemoval_;
   bool withAdaptativeContactProcessCov_;
 
   IndexedVector3 com_, comd_, comdd_;
