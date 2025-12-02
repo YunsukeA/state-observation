@@ -40,12 +40,8 @@ public:
   ///              of the IMU expressed in the control frame
   ///  \li beta  : parameter related to the fast convergence of the tilt
   ///  \li gamma : parameter related to the orthogonality
+  ///  \li dt    : sampling time
   TiltEstimator(double alpha, double beta, double gamma, double dt);
-
-protected:
-  // constructor that allows to use custom sizes for the state and measurement vectors. Might be useful for other
-  // estimators inheriting from this one.
-  TiltEstimator(double alpha, double beta, double gamma, int n, int m, double dt);
 
 public:
   /// @brief initializes the state vector.
@@ -98,6 +94,8 @@ public:
 
   /// sets ths measurement (accelero and gyro stacked in one vector)
   void setMeasurement(const Vector3 & yv_k, const Vector3 & ya_k, const Vector3 & yg_k, TimeIndex k);
+
+  using ZeroDelayObserver::setMeasurement;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

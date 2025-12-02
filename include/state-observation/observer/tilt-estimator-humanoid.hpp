@@ -34,16 +34,70 @@ public:
   ///              of the IMU expressed in the control frame
   ///  \li beta  : parameter related to the fast convergence of the tilt
   ///  \li gamma : parameter related to the orthogonality
+  ///  \li dt : sampling time
   TiltEstimatorHumanoid(double alpha, double beta, double gamma, double dt);
 
-protected:
-  // constructor that allows to use custom sizes for the state and measurement vectors. Might be useful for other
-  // estimators inheriting from this one.
-  TiltEstimatorHumanoid(double alpha, double beta, double gamma, int n, int m, double dt);
+  /// sets the position of the IMU sensor in the control frame
+  void setSensorPositionInC(const Vector3 & p)
+  {
+    p_S_C_ = p;
+  }
 
-public:
-  /// @brief Resets x1hat (the estimate of the local linear velocity of the IMU in the world)
-  /// @details Avoid discontinuities when the computation mode of the anchor point changes
+  Vector3 getSensorPositionInC()
+  {
+    return p_S_C_;
+  }
+
+  /// sets the oriantation of the IMU sensor in the control frame
+  void setSensorOrientationInC(const Matrix3 & R)
+  {
+    R_S_C_ = R;
+  }
+  Matrix3 getSensorOrientationInC()
+  {
+    return R_S_C_;
+  }
+
+  Vector3 getVirtualLocalVelocityMeasurement()
+  {
+    return x1_;
+  }
+
+  /// sets teh linear velocity of the IMU sensor in the control frame
+  void setSensorLinearVelocityInC(const Vector3 & v)
+  {
+    v_S_C_ = v;
+  }
+
+  Vector3 getSensorLinearVelocityInC()
+  {
+    return v_S_C_;
+  }
+
+  /// sets the angular velocity of the IMU sensor in the control frame
+  void setSensorAngularVelocityInC(const Vector3 & w)
+  {
+    w_S_C_ = w;
+  }
+  Vector3 getSensorAngularVelocityInC()
+  {
+    return w_S_C_;
+  }
+
+  /// sets the velocity of the control origin in the world frame
+  /// this velocity has to be expressed in the control frame.
+  void setControlOriginVelocityInW(const Vector3 & v)
+  {
+    v_C_ = v;
+  }
+  Vector3 getControlOriginVelocityInW()
+  {
+    return v_C_;
+  }
+
+  /// @brief informs the estimator that x1hat (the estimate of the local linear velocity of the IMU in the world) needs
+  /// to be reset.
+  /// @copydetails checkResetX1hat()
   void resetImuLocVelHat();
 
 /// prevent c++ overloaded virtual function warning

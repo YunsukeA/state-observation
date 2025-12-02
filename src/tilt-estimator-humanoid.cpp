@@ -2,13 +2,10 @@
 
 namespace stateObservation
 {
-TiltEstimatorHumanoid::TiltEstimatorHumanoid(double alpha, double beta, double gamma, double dt)
-: TiltEstimator(alpha, beta, gamma, dt)
-{
-}
 
-TiltEstimatorHumanoid::TiltEstimatorHumanoid(double alpha, double beta, double gamma, int n, int m, double dt)
-: TiltEstimator(alpha, beta, gamma, n, m, dt)
+TiltEstimatorHumanoid::TiltEstimatorHumanoid(double alpha, double beta, double gamma, double dt)
+: TiltEstimator(alpha, beta, gamma, dt), p_S_C_(Vector3::Zero()), R_S_C_(Matrix3::Identity()), v_S_C_(Vector3::Zero()),
+  w_S_C_(Vector3::Zero()), v_C_(Vector3::Zero())
 {
 }
 

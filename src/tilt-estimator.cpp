@@ -4,12 +4,7 @@ namespace stateObservation
 {
 
 TiltEstimator::TiltEstimator(double alpha, double beta, double gamma, double dt)
-: TiltEstimator(alpha, beta, gamma, 9, 9, dt)
-{
-}
-
-TiltEstimator::TiltEstimator(double alpha, double beta, double gamma, int n, int m, double dt)
-: ZeroDelayObserver(n, m), alpha_(alpha), beta_(beta), gamma_(gamma), dt_(dt)
+: ZeroDelayObserver(9, 9), alpha_(alpha), beta_(beta), gamma_(gamma), dt_(dt)
 {
 }
 

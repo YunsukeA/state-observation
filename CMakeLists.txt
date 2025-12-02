@@ -15,7 +15,7 @@
 # received a copy of the GNU Lesser General Public License along with
 # state-observation. If not, see <http://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.1.4)
+cmake_minimum_required(VERSION 3.5)
 if(POLICY CMP0063)
   cmake_policy(SET CMP0063 NEW)
 endif()
@@ -23,7 +23,7 @@ endif()
 set(PROJECT_NAME state-observation)
 set(PROJECT_DESCRIPTION "General implementation of observers.")
 set(PROJECT_URL "https://github.com/jrl-umi3218/state-observation")
-set(PROJECT_VERSION 1.6.1)
+set(PROJECT_VERSION 1.7.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CXX_DISABLE_WERROR TRUE)
 set(PROJECT_USE_CMAKE_EXPORT TRUE)
